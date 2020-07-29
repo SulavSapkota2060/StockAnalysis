@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chart.js</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+</head>
+<body onload="fetchStock()">
+    
+    
+        {% include 'todo/navbar.html' %}
+
+        <button title="Press this once a day" id="refresh" class="btn btn-dark"><i class="fa fa-refresh" aria-hidden="true"></i>
+        </button>
+            <center>
+                <div style="margin-left: 10%;" id="row" class="row"  >
+                </div>
+            </center>
+ 
+
+
+
+<script>   
+function getCookie(name) {
+			let cookieValue = null;
+			if (document.cookie && document.cookie !== '') {
+				const cookies = document.cookie.split(';');
+				for (let i = 0; i < cookies.length; i++) {
+					const cookie = cookies[i].trim();
+					// Does this cookie string begin with the name we want?
+					if (cookie.substring(0, name.length + 1) === (name + '=')) {
+						cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+						break;
+					}
+				}
+			}
+			return cookieValue;
+		}
+		const csrftoken = getCookie('csrftoken');
+
+function chartIt(labels,value, company,bc,bdc){
+        var ctx = document.getElementById(company).getContext('2d');
+        var chart = new Chart(ctx,{
+        type:'line',
+        data: {
+            labels: labels,
+            
+            datasets: [{ 
+                label:company,
+                backgroundColor: mainbg,
+            borderColor: mainbd,
+            borderWidth: 3,  
+            data: value,
+                
+            }]
+            
+        },
+
+    })
+    console.log(bc)
+    }
+
+    function fetchStock(){
+       
+        fetch('http://127.0.0.1:8000/api/stock_list?format=json')
+        .then((resp) => resp.json())
+        .then((data) => {
+            output = ''
+            data.forEach(function(com){
+                output +=  `<div class= 'col-md-5' >
+                <canvas height='300' width='300' id = '${com.name}'> Hi</canvas>
+                </div>
+                `
+                
+            })
+            document.getElementById("row").innerHTML = output;
+            var bc;
+            var bdc;
+            data.forEach(function(co){
+                date = co.details.date
+                price = co.details.price
+                name = co.name
+                bc,bdc = colorPicker()
+                chartIt(date,price,name,bc,bdc)
+
+            })
+        })
+        
+        function colorPicker(){
+            bgcolor = ['rgba(255, 99, 132, 0.2)',
+                'rgba(54, 162, 235, 0.2)',
+                'rgba(255, 206, 86, 0.2)',
+                'rgba(75, 192, 192, 0.2)',
+                'rgba(153, 102, 255, 0.2)',
+                'rgba(255, 159, 64, 0.2)']
+
+            bordercolor = ['rgba(255, 99, 132, 1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)']
+
+            mainbg = bgcolor[Math.floor(Math.random()*bgcolor.length)];
+            mainbd = bordercolor[Math.floor(Math.random()*bordercolor.length)]
+
+            return mainbg,mainbd
+        }
+    }
+    document.getElementById("refresh").addEventListener('click',refreshStock)
+    function refreshStock(){
+        fetch('http://127.0.0.1:8000/api/updateStatus/',{
+            method:'POST',
+            headers:{
+                'Accept':'application/json,plain/text,*/*',
+                'content-type':'application/json',
+                'X-CSRFToken':csrftoken,
+
+            },
+            body:JSON.stringify({'stat':true})
+        })
+        .then((resp) => resp.json())
+        .then((data) => {
+            console.log(data.stat)
+            fetchStock()
+            fetch('http://127.0.0.1:8000/api/updateStatus/',{
+            method:'POST',
+            headers:{
+                'Accept':'application/json,plain/text,*/*',
+                'content-type':'application/json',
+                'X-CSRFToken':csrftoken,
+
+            },
+            body:JSON.stringify({'stat':false})
+        })
+        })
+    }
+    
+    
+</script>
+</body>
+</html>
